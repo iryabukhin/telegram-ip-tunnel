@@ -91,6 +91,8 @@ ENV/
 # JetBrains
 .idea
 
+.vscode
+
 # Telethon SQLite session data
 *.session
 *.session-journal
