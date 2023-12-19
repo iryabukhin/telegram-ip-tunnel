@@ -71,28 +71,34 @@ async def main(phone: str, username: str, tun_tap_wrapper: TunTapWrapper):
     check_lock_task = asyncio.create_task(lock_check())
 
     print(f'Starting to listen to incoming messags from {username}...')
-    await asyncio.gather(client_live_cycle_task, read_tun_task, check_lock_task)
+    await asyncio.gather(client_live_cycle_task, read_tun_task, check_lock_task, return_exceptions=True)
 
     up = False
     print('Stopping message receiver and shutting down the tunnel...')
     tun_tap_wrapper.down()
     client.disconnect()
 
-    print(f'Total bytes sent via Telegram: {str(tun_tap_wrapper._sent)}')
-    print(f'Total bytes received via Telegram: {str(tun_tap_wrapper._received)}')
-    print('Exiting...')
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Teletun - IP over Telegram')
     parser.add_argument('-p', '--phone', help='Account phone number', required=True)
     parser.add_argument('-u', '--username', help='username', required=True)
     parser.add_argument('-r', '--server', help='server', action='store_true')
-    parser.add_argument('-p', '--src', help='peer address', default='10.0.0.1')
-    parser.add_argument('-s', '--dst', help='server address', default='10.0.0.2')
+    parser.add_argument('-s', '--src', help='peer address', default='10.0.0.1')
+    parser.add_argument('-d', '--dst', help='server address', default='10.0.0.2')
     parser.add_argument('-m', '--mask', help='mask', default='255.255.255.0')
     parser.add_argument('-n', '--mtu', help='MTU', default=1500)
     args = parser.parse_args()
     tun_tap_wrapper = build_tun_tap_wrapper(args)
-    asyncio.run(
-        main(args.phone, args.username, tun_tap_wrapper)
-    )
+
+    try:
+        asyncio.run(
+            main(args.phone, args.username, tun_tap_wrapper)
+        )
+    except KeyboardInterrupt:
+        up = False
+        print('Received interrupt, shutting down...')
+        print('Bringing down the TUN interface...')
+        tun_tap_wrapper.down()
+        print(f'Total bytes sent via Telegram: {str(tun_tap_wrapper._sent)}')
+        print(f'Total bytes received via Telegram: {str(tun_tap_wrapper._received)}')
+    print('Bye!')
