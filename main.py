@@ -15,7 +15,6 @@ env.read_env()
 
 API_ID = env('API_ID')
 API_HASH = env('API_HASH')
-PHONE_NUMBER = env('PHONE_NUMBER')
 
 up = False
 
@@ -58,14 +57,14 @@ async def read_tun(tun_tap_wrapper: TunTapWrapper, client: TelegramClient, usern
         await client.send_message(username, b64encoded_data)
 
 
-async def main(username: str, tun_tap_wrapper: TunTapWrapper):
+async def main(phone: str, username: str, tun_tap_wrapper: TunTapWrapper):
     client = TelegramClient('teletun', int(API_ID), API_HASH)
     @client.on(events.NewMessage(incoming=True, from_users=username, forwards=False))
     async def new_msg_handler(event):
         tun_tap_wrapper.write(event.message.text)
 
     print('Initiating connection to Telegram API...')
-    await client.start(PHONE_NUMBER)
+    await client.start(phone)
 
     client_live_cycle_task = asyncio.create_task(client.run_until_disconnected())
     read_tun_task = asyncio.create_task(read_tun(tun_tap_wrapper, client, username))
@@ -85,6 +84,7 @@ async def main(username: str, tun_tap_wrapper: TunTapWrapper):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Teletun - IP over Telegram')
+    parser.add_argument('-p', '--phone', help='Account phone number', required=True)
     parser.add_argument('-u', '--username', help='username', required=True)
     parser.add_argument('-r', '--server', help='server', action='store_true')
     parser.add_argument('-p', '--src', help='peer address', default='10.0.0.1')
@@ -93,4 +93,6 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--mtu', help='MTU', default=1500)
     args = parser.parse_args()
     tun_tap_wrapper = build_tun_tap_wrapper(args)
-    asyncio.run(main(args.username, tun_tap_wrapper))
+    asyncio.run(
+        main(args.phone, args.username, tun_tap_wrapper)
+    )
